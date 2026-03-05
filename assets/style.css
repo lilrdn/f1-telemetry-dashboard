@@ -1,0 +1,30 @@
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap');
+
+* { font-family: 'Inter', sans-serif; }
+
+.card {
+  border-radius: 15px !important;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08) !important;
+  border: none !important;
+  transition: transform 0.2s;
+}
+
+.card:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 6px 25px rgba(0,0,0,0.12) !important;
+}
+
+.dropdown {
+  border-radius: 10px !important;
+  z-index: 1000;
+}
+
+.filters-container {
+  position: relative;
+  z-index: 1000;
+  background: white;
+  border-radius: 15px;
+  padding: 15px;
+  box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+

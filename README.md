@@ -1,0 +1,57 @@
+# F1 Telemetry Dashboard
+
+Dash-приложение для просмотра телеметрии FastF1 (карта трассы, газ/тормоз/скорость, карта ускорений) и выгрузки отчёта в **DOCX**.
+
+## Запуск
+
+1) Создай и активируй окружение (пример для conda):
+
+```bash
+conda create -n f1_env python=3.12 -y
+conda activate f1_env
+pip install -r requirements.txt
+```
+
+2) (Опционально) положи свои изображения:
+
+- портреты: `data/portraits/` (например `alb.jpg`)
+- логотипы: `data/teams/` (например `williams.png`, `visa_cash_app_rb.png`)
+
+3) Запусти:
+
+```bash
+python -m f1_telemetry_dashboard
+```
+
+Открой в браузере адрес, который появится в консоли (по умолчанию `http://127.0.0.1:8051`).
+
+## Настройки через переменные окружения
+
+- **FASTF1_API_MIRROR**: зеркало FastF1 (например `livetiming-mirror.fastf1.dev`)
+- **F1_CACHE_DIR**: папка кэша FastF1 (по умолчанию `./f1_cache`)
+- **F1_PORTRAIT_DIR**: папка портретов (по умолчанию `./data/portraits`)
+- **F1_TEAM_LOGO_DIR**: папка логотипов (по умолчанию `./data/teams`)
+- **F1_PORT**: порт приложения (по умолчанию `8051`)
+
+Пример:
+
+```bash
+export FASTF1_API_MIRROR=livetiming-mirror.fastf1.dev
+export F1_PORT=8051
+python -m f1_telemetry_dashboard
+```
+
+## Отчёт (DOCX)
+
+Кнопка **«Скачать отчёт (DOCX)»** скачивает файл через браузер (в папку загрузок браузера).
+
+Если графики не попадают в DOCX, проверь что установлен **kaleido**:
+
+```bash
+pip install kaleido
+```
+
+## Примечания по данным
+
+- В тестовых сессиях FastF1 часто не содержит валидных кругов/секторов для части пилотов — это ограничение источника данных.
+

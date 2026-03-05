@@ -1,0 +1,30 @@
+__pycache__/
+*.py[cod]
+*$py.class
+
+.DS_Store
+.ipynb_checkpoints/
+
+.env
+.venv/
+venv/
+env/
+
+# Python packaging
+dist/
+build/
+*.egg-info/
+
+# FastF1 cache and app artifacts
+f1_cache/
+*.log
+
+# User-provided images (keep local)
+data/portraits/*
+data/teams/*
+!data/portraits/.gitkeep
+!data/teams/.gitkeep
+
+# Generated reports
+*.docx
+~$*.docx
