@@ -87,7 +87,7 @@ def create_app() -> Dash:
                                                             ),
                                                             dbc.Col(
                                                                 [html.Label("Событие"), dcc.Dropdown(id="race-dropdown", className="dropdown")],
-                                                                width=2,
+                                                                width=3,
                                                             ),
                                                             dbc.Col(
                                                                 [
@@ -105,7 +105,7 @@ def create_app() -> Dash:
                                                             ),
                                                             dbc.Col(
                                                                 [html.Label("Круг"), dcc.Dropdown(id="lap-dropdown", className="dropdown")],
-                                                                width=2,
+                                                                width=1,
                                                             ),
                                                         ]
                                                     ),
@@ -331,7 +331,7 @@ def create_app() -> Dash:
                 return [], None
             laps = sorted(laps_df["LapNumber"].unique())
             safe_laps = [safe_int(lap) for lap in laps]
-            options = [{"label": f"Круг {lap}", "value": lap} for lap in safe_laps]
+            options = [{"label": lap, "value": lap} for lap in safe_laps]
             value = safe_laps[0] if safe_laps else None
             return options, value
         except Exception as e:

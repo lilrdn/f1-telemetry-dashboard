@@ -249,7 +249,7 @@ def create_acceleration_map_base64(telemetry: pd.DataFrame) -> str:
                 ax.add_collection(lc)
                 ax.set_xlim(x.min(), x.max())
                 ax.set_ylim(y.min(), y.max())
-                ax.set_title("Торможения (красный) / Ускорения (зеленый)", fontsize=14, fontweight="bold")
+                ax.set_title("Торможения (зеленый) / Ускорения (красный)", fontsize=14, fontweight="bold")
                 ax.axis("equal")
                 ax.axis("off")
                 ax.set_facecolor("#f8f9fa")
