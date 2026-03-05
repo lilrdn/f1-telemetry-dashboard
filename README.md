@@ -20,7 +20,7 @@ pip install -r requirements.txt
 3) Запусти:
 
 ```bash
-python -m f1_telemetry_dashboard
+python -m src.f1_telemetry_dashboard
 ```
 
 Открой в браузере адрес, который появится в консоли (по умолчанию `http://127.0.0.1:8051`).
