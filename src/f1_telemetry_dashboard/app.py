@@ -68,7 +68,7 @@ def create_app() -> Dash:
                                                                         className="dropdown",
                                                                     ),
                                                                 ],
-                                                                width=1,
+                                                                width=2,
                                                             ),
                                                             dbc.Col(
                                                                 [
@@ -87,7 +87,7 @@ def create_app() -> Dash:
                                                             ),
                                                             dbc.Col(
                                                                 [html.Label("Событие"), dcc.Dropdown(id="race-dropdown", className="dropdown")],
-                                                                width=3,
+                                                                width=2,
                                                             ),
                                                             dbc.Col(
                                                                 [
