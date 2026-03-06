@@ -107,7 +107,8 @@ def create_app() -> Dash:
                                                                 [html.Label("Круг"), dcc.Dropdown(id="lap-dropdown", className="dropdown")],
                                                                 width=1,
                                                             ),
-                                                        ]
+                                                        ],
+                                                        className="g-2 justify-content-between",
                                                     ),
                                                 ]
                                             )
