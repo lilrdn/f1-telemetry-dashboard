@@ -319,7 +319,11 @@ def create_app() -> Dash:
                                                 html.Label("Топ"),
                                                 dbc.Select(
                                                     id="standings-topn",
-                                                    options=[{"label": n, "value": n} for n in [5, 10, 15, 20]],
+                                                    options=[
+                                                        {"label": "5", "value": 5},
+                                                        {"label": "10", "value": 10},
+                                                        {"label": "Все", "value": "all"},
+                                                    ],
                                                     value=10,
                                                     className="dropdown",
                                                 ),
@@ -354,8 +358,118 @@ def create_app() -> Dash:
                     ),
                 ]
             ),
-            dbc.Row([dbc.Col(dbc.Card(dbc.CardBody([dcc.Graph(id="driver-standings-graph")]), className="card mb-3"), width=12)]),
-            dbc.Row([dbc.Col(dbc.Card(dbc.CardBody([dcc.Graph(id="constructor-standings-graph")]), className="card mb-3"), width=12)]),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody(
+                                [
+                                    html.H5("Текущий лидер пилотов", className="mb-2"),
+                                    html.Div(
+                                        style={"display": "flex", "alignItems": "center"},
+                                        children=[
+                                            html.Img(
+                                                id="standings-driver-leader-img",
+                                                style={
+                                                    "height": "80px",
+                                                    "width": "80px",
+                                                    "borderRadius": "50%",
+                                                    "objectFit": "cover",
+                                                    "marginRight": "15px",
+                                                    "border": "2px solid #ddd",
+                                                },
+                                            ),
+                                            html.Div(id="standings-driver-leader-name", style={"fontSize": "20px", "fontWeight": "bold"}),
+                                        ],
+                                    ),
+                                ]
+                            ),
+                            className="card mb-3",
+                        ),
+                        width=6,
+                    ),
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody(
+                                [
+                                    html.H5("Текущий лидер конструкторов", className="mb-2"),
+                                    html.Div(
+                                        style={"display": "flex", "alignItems": "center"},
+                                        children=[
+                                            html.Img(
+                                                id="standings-constructor-leader-img",
+                                                style={
+                                                    "height": "80px",
+                                                    "width": "80px",
+                                                    "objectFit": "contain",
+                                                    "marginRight": "15px",
+                                                    "border": "2px solid #ddd",
+                                                    "borderRadius": "8px",
+                                                    "padding": "6px",
+                                                    "backgroundColor": "#fff",
+                                                },
+                                            ),
+                                            html.Div(id="standings-constructor-leader-name", style={"fontSize": "20px", "fontWeight": "bold"}),
+                                        ],
+                                    ),
+                                ]
+                            ),
+                            className="card mb-3",
+                        ),
+                        width=6,
+                    ),
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody(
+                                [
+                                    dbc.Checklist(
+                                        id="driver-standings-metrics",
+                                        options=[
+                                            {"label": "Места", "value": "position"},
+                                            {"label": "Очки", "value": "points"},
+                                        ],
+                                        value=["position"],
+                                        inline=True,
+                                        className="mb-2",
+                                    ),
+                                    dcc.Graph(id="driver-standings-graph"),
+                                ]
+                            ),
+                            className="card mb-3",
+                        ),
+                        width=12,
+                    )
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody(
+                                [
+                                    dbc.Checklist(
+                                        id="constructor-standings-metrics",
+                                        options=[
+                                            {"label": "Места", "value": "position"},
+                                            {"label": "Очки", "value": "points"},
+                                        ],
+                                        value=["position"],
+                                        inline=True,
+                                        className="mb-2",
+                                    ),
+                                    dcc.Graph(id="constructor-standings-graph"),
+                                ]
+                            ),
+                            className="card mb-3",
+                        ),
+                        width=12,
+                    )
+                ]
+            ),
         ]
     )
 
@@ -398,15 +512,23 @@ def create_app() -> Dash:
     @app.callback(
         Output("driver-standings-table", "children"),
         Output("constructor-standings-table", "children"),
+        Output("standings-driver-leader-img", "src"),
+        Output("standings-driver-leader-name", "children"),
+        Output("standings-constructor-leader-img", "src"),
+        Output("standings-constructor-leader-name", "children"),
         Output("driver-standings-graph", "figure"),
         Output("constructor-standings-graph", "figure"),
         Input("standings-year", "value"),
         Input("standings-topn", "value"),
+        Input("driver-standings-metrics", "value"),
+        Input("constructor-standings-metrics", "value"),
         Input("theme-dropdown", "value"),
     )
-    def update_standings_page(season, topn, theme):
+    def update_standings_page(season, topn, driver_metrics, constructor_metrics, theme):
         season = int(season) if season else current_year - 1
-        topn = int(topn) if topn else 10
+        topn_value = None if str(topn) == "all" else (int(topn) if topn else 10)
+        driver_metrics = driver_metrics or ["position"]
+        constructor_metrics = constructor_metrics or ["position"]
         theme = (theme or "dark").lower()
 
         # Tables (current standings)
@@ -416,7 +538,12 @@ def create_app() -> Dash:
         if not ddf.empty:
             ddf = ddf.copy()
             ddf["Driver"] = (ddf["givenName"].astype(str) + " " + ddf["familyName"].astype(str)).str.strip()
-            ddf["Team"] = ddf["constructorNames"].apply(lambda x: x[0] if isinstance(x, list) and x else "")
+            if "constructorNames" in ddf.columns:
+                ddf["Team"] = ddf["constructorNames"].apply(lambda x: x[0] if isinstance(x, list) and x else "")
+            elif "constructorName" in ddf.columns:
+                ddf["Team"] = ddf["constructorName"].astype(str)
+            else:
+                ddf["Team"] = ""
         if not cdf.empty:
             cdf = cdf.copy()
             cdf["Constructor"] = cdf["constructorName"]
@@ -424,13 +551,38 @@ def create_app() -> Dash:
         driver_table = _df_to_table(
             ddf,
             columns=[("Pos", "position"), ("Driver", "Driver"), ("PTS", "points"), ("Wins", "wins"), ("Team", "Team")],
-            max_rows=topn,
+            max_rows=topn_value or 1000,
         )
         constructor_table = _df_to_table(
             cdf,
             columns=[("Pos", "position"), ("Constructor", "constructorName"), ("PTS", "points"), ("Wins", "wins")],
-            max_rows=topn,
+            max_rows=topn_value or 1000,
         )
+
+        # Leaders block
+        driver_leader_img = None
+        driver_leader_name = "Нет данных"
+        if not ddf.empty:
+            ddf_lead = ddf.copy()
+            ddf_lead["position_num"] = pd.to_numeric(ddf_lead["position"], errors="coerce")
+            ddf_lead = ddf_lead.sort_values("position_num")
+            lead = ddf_lead.iloc[0]
+            last_name = str(lead.get("familyName", "")).strip()
+            if last_name:
+                driver_leader_img = image_to_base64(settings.portrait_dir / f"{last_name[:3].lower()}.jpg")
+            driver_leader_name = str(lead.get("Driver", "")).strip() or "Нет данных"
+
+        constructor_leader_img = None
+        constructor_leader_name = "Нет данных"
+        if not cdf.empty:
+            cdf_lead = cdf.copy()
+            cdf_lead["position_num"] = pd.to_numeric(cdf_lead["position"], errors="coerce")
+            cdf_lead = cdf_lead.sort_values("position_num")
+            clead = cdf_lead.iloc[0]
+            constructor_leader_name = str(clead.get("constructorName", "")).strip() or "Нет данных"
+            team_key = TEAM_LOGO_MAP.get(constructor_leader_name)
+            if team_key:
+                constructor_leader_img = image_to_base64(settings.team_logo_dir / f"{team_key}.png")
 
         # Rounds list for trend charts
         try:
@@ -439,8 +591,40 @@ def create_app() -> Dash:
         except Exception:
             rounds = list(range(1, 25))
 
-        dts = build_standings_timeseries(season=season, rounds=rounds, kind="driver", top_n=topn)
-        cts = build_standings_timeseries(season=season, rounds=rounds, kind="constructor", top_n=topn)
+        country_code_map = {
+            "japan": "JPN",
+            "united states": "USA",
+            "united arab emirates": "UAE",
+            "saudi arabia": "SAU",
+            "great britain": "GBR",
+            "netherlands": "NED",
+        }
+        round_short: dict[int, str] = {}
+        round_full: dict[int, str] = {}
+        try:
+            for _, row in schedule.iterrows():
+                rnd = int(row.get("RoundNumber", 0))
+                if rnd <= 0:
+                    continue
+                country = str(row.get("Country", "")).strip()
+                event_name = str(row.get("EventName", "")).strip()
+                key = country.lower()
+                short = country_code_map.get(key, "".join(ch for ch in country.upper() if ch.isalpha())[:3] or f"R{rnd}")
+                round_short[rnd] = short
+                round_full[rnd] = event_name or country or f"Round {rnd}"
+        except Exception:
+            for rnd in rounds:
+                round_short[rnd] = f"R{rnd}"
+                round_full[rnd] = f"Round {rnd}"
+
+        try:
+            dts = build_standings_timeseries(season=season, rounds=rounds, kind="driver", top_n=topn_value)
+        except Exception:
+            dts = pd.DataFrame()
+        try:
+            cts = build_standings_timeseries(season=season, rounds=rounds, kind="constructor", top_n=topn_value)
+        except Exception:
+            cts = pd.DataFrame()
 
         font_color = "#E5E7EB" if theme == "dark" else "#111827"
         bg = "#111111" if theme == "dark" else "#ffffff"
@@ -449,7 +633,40 @@ def create_app() -> Dash:
         dfig = go.Figure()
         if not dts.empty:
             for name, g in dts.groupby("name"):
-                dfig.add_trace(go.Scatter(x=g["round"], y=g["position"], mode="lines+markers", name=name))
+                custom = [round_full.get(int(r), f"Round {int(r)}") for r in g["round"]]
+                if "position" in driver_metrics:
+                    dfig.add_trace(
+                        go.Scatter(
+                            x=g["round"],
+                            y=g["position"],
+                            mode="lines+markers",
+                            name=f"{name} (место)",
+                            customdata=custom,
+                            hovertemplate="%{customdata}<br>%{x}: место %{y}<extra></extra>",
+                        )
+                    )
+                if "points" in driver_metrics:
+                    dfig.add_trace(
+                        go.Scatter(
+                            x=g["round"],
+                            y=g["points"],
+                            mode="lines+markers",
+                            line=dict(dash="dot"),
+                            name=f"{name} (очки)",
+                            yaxis="y2",
+                            customdata=custom,
+                            hovertemplate="%{customdata}<br>%{x}: очки %{y}<extra></extra>",
+                        )
+                    )
+        else:
+            dfig.add_annotation(
+                text="Не удалось загрузить динамику (таймаут Ergast). Попробуй ещё раз позже.",
+                showarrow=False,
+                x=0.5,
+                y=0.5,
+                xref="paper",
+                yref="paper",
+            )
         dfig.update_layout(
             title="Динамика позиций (пилоты)",
             plot_bgcolor=bg,
@@ -457,14 +674,56 @@ def create_app() -> Dash:
             font=dict(color=font_color),
             hovermode="x unified",
             margin=dict(l=10, r=10, t=50, b=10),
+            yaxis2=dict(overlaying="y", side="right", showgrid=False, title="Очки"),
         )
-        dfig.update_xaxes(title="Раунд", gridcolor=grid)
+        dfig.update_xaxes(
+            title="Этап",
+            tickmode="array",
+            tickvals=rounds,
+            ticktext=[round_short.get(r, f"R{r}") for r in rounds],
+            gridcolor=grid,
+        )
         dfig.update_yaxes(title="Позиция", autorange="reversed", gridcolor=grid)
+        if "position" not in driver_metrics:
+            dfig.update_yaxes(autorange=True, title="Значение", gridcolor=grid)
 
         cfig = go.Figure()
         if not cts.empty:
             for name, g in cts.groupby("name"):
-                cfig.add_trace(go.Scatter(x=g["round"], y=g["position"], mode="lines+markers", name=name))
+                custom = [round_full.get(int(r), f"Round {int(r)}") for r in g["round"]]
+                if "position" in constructor_metrics:
+                    cfig.add_trace(
+                        go.Scatter(
+                            x=g["round"],
+                            y=g["position"],
+                            mode="lines+markers",
+                            name=f"{name} (место)",
+                            customdata=custom,
+                            hovertemplate="%{customdata}<br>%{x}: место %{y}<extra></extra>",
+                        )
+                    )
+                if "points" in constructor_metrics:
+                    cfig.add_trace(
+                        go.Scatter(
+                            x=g["round"],
+                            y=g["points"],
+                            mode="lines+markers",
+                            line=dict(dash="dot"),
+                            name=f"{name} (очки)",
+                            yaxis="y2",
+                            customdata=custom,
+                            hovertemplate="%{customdata}<br>%{x}: очки %{y}<extra></extra>",
+                        )
+                    )
+        else:
+            cfig.add_annotation(
+                text="Не удалось загрузить динамику (таймаут Ergast). Попробуй ещё раз позже.",
+                showarrow=False,
+                x=0.5,
+                y=0.5,
+                xref="paper",
+                yref="paper",
+            )
         cfig.update_layout(
             title="Динамика позиций (конструкторы)",
             plot_bgcolor=bg,
@@ -472,11 +731,29 @@ def create_app() -> Dash:
             font=dict(color=font_color),
             hovermode="x unified",
             margin=dict(l=10, r=10, t=50, b=10),
+            yaxis2=dict(overlaying="y", side="right", showgrid=False, title="Очки"),
         )
-        cfig.update_xaxes(title="Раунд", gridcolor=grid)
+        cfig.update_xaxes(
+            title="Этап",
+            tickmode="array",
+            tickvals=rounds,
+            ticktext=[round_short.get(r, f"R{r}") for r in rounds],
+            gridcolor=grid,
+        )
         cfig.update_yaxes(title="Позиция", autorange="reversed", gridcolor=grid)
+        if "position" not in constructor_metrics:
+            cfig.update_yaxes(autorange=True, title="Значение", gridcolor=grid)
 
-        return driver_table, constructor_table, dfig, cfig
+        return (
+            driver_table,
+            constructor_table,
+            driver_leader_img,
+            driver_leader_name,
+            constructor_leader_img,
+            constructor_leader_name,
+            dfig,
+            cfig,
+        )
 
     @app.callback(
         Output("race-dropdown", "options"),

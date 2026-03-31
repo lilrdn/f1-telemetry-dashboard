@@ -150,7 +150,10 @@ def get_lap_telemetry(session, driver_code: str, lap_num: int) -> tuple[pd.DataF
     Returns (telemetry_df, lap_obj, circuit_info)
     telemetry_df columns: Time, Distance, Speed, Throttle, Brake, X, Y (if available)
     """
-    lap_obj = session.laps.pick_driver(driver_code).pick_lap(lap_num)
+    # FastF1 deprecations: pick_driver/pick_lap -> pick_drivers/pick_laps
+    lap_obj = session.laps.pick_drivers([driver_code]).pick_laps([lap_num])
+    if hasattr(lap_obj, "iloc"):
+        lap_obj = lap_obj.iloc[0]
     car_data = lap_obj.get_car_data().add_distance()
     pos_data = lap_obj.get_pos_data()
 
