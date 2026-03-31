@@ -1,2 +1,3 @@
-- основной код для GitHub находится в `src/f1_telemetry_dashboard/`
+- основной код для GitHub находится в `src/f1_telemetry_dashboard/`.
+- в данной папке находится ipynb-ноутбук с исходным скриптом дашборда.
 
