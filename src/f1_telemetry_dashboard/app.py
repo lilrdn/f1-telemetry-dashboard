@@ -344,24 +344,6 @@ def create_app() -> Dash:
                 [
                     dbc.Col(
                         dbc.Card(
-                            dbc.CardBody([html.H5("Личный зачёт", className="mb-2"), html.Div(id="driver-standings-table")]),
-                            className="card mb-3",
-                        ),
-                        width=6,
-                    ),
-                    dbc.Col(
-                        dbc.Card(
-                            dbc.CardBody([html.H5("Кубок конструкторов", className="mb-2"), html.Div(id="constructor-standings-table")]),
-                            className="card mb-3",
-                        ),
-                        width=6,
-                    ),
-                ]
-            ),
-            dbc.Row(
-                [
-                    dbc.Col(
-                        dbc.Card(
                             dbc.CardBody(
                                 [
                                     html.H5("Текущий лидер пилотов", className="mb-2"),
@@ -414,6 +396,24 @@ def create_app() -> Dash:
                                     ),
                                 ]
                             ),
+                            className="card mb-3",
+                        ),
+                        width=6,
+                    ),
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody([html.H5("Личный зачёт", className="mb-2"), html.Div(id="driver-standings-table")]),
+                            className="card mb-3",
+                        ),
+                        width=6,
+                    ),
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody([html.H5("Кубок конструкторов", className="mb-2"), html.Div(id="constructor-standings-table")]),
                             className="card mb-3",
                         ),
                         width=6,
