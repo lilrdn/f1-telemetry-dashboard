@@ -28,6 +28,7 @@ from .viz import (
     create_brake_throttle_plot,
     create_track_map_with_sectors,
 )
+from .standings import build_standings_timeseries, get_constructor_standings, get_driver_standings
 
 
 def create_app() -> Dash:
@@ -42,11 +43,48 @@ def create_app() -> Dash:
 
     current_year = datetime.datetime.now().year
 
-    app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
+    app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY], suppress_callback_exceptions=True)
 
-    app.layout = dbc.Container(
+    navbar = dbc.Navbar(
+        dbc.Container(
+            [
+                dbc.NavbarBrand("F1 Телеметрия Дашборд", className="fw-bold"),
+                dbc.Nav(
+                    [
+                        dbc.NavLink("Телеметрия", href="/", active="exact"),
+                        dbc.NavLink("Чемпионат", href="/standings", active="exact"),
+                    ],
+                    pills=True,
+                ),
+                dbc.Row(
+                    [
+                        dbc.Col(
+                            dbc.Select(
+                                id="theme-dropdown",
+                                options=[
+                                    {"label": "Светлая тема", "value": "light"},
+                                    {"label": "Тёмная тема", "value": "dark"},
+                                ],
+                                value="dark",
+                                className="dropdown",
+                                style={"minWidth": "180px"},
+                            ),
+                            width="auto",
+                        )
+                    ],
+                    className="g-2",
+                    align="center",
+                ),
+            ]
+        ),
+        color="dark",
+        dark=True,
+        className="mb-3 rounded",
+    )
+
+    dashboard_page = html.Div(
         [
-            dbc.Row([dbc.Col([html.H1("F1 Телеметрия Дашборд", className="text-center my-4")])]),
+            dbc.Row([dbc.Col([html.H2("Телеметрия круга", className="text-center my-2")])]),
             html.Div(
                 [
                     dbc.Row(
@@ -131,26 +169,6 @@ def create_app() -> Dash:
                 [
                     dbc.Col(
                         [
-                            html.Label("Тема"),
-                            dbc.Select(
-                                id="theme-dropdown",
-                                options=[
-                                    {"label": "Светлая тема", "value": "light"},
-                                    {"label": "Тёмная тема", "value": "dark"},
-                                ],
-                                value="dark",
-                                className="dropdown",
-                            ),
-                        ],
-                        width=2,
-                    )
-                ],
-                className="mb-4",
-            ),
-            dbc.Row(
-                [
-                    dbc.Col(
-                        [
                             html.Div(
                                 id="driver-info",
                                 style={"display": "flex", "alignItems": "center"},
@@ -200,29 +218,16 @@ def create_app() -> Dash:
                 ],
                 className="mb-3",
             ),
+            dbc.Row([dbc.Col([dbc.Card([dbc.CardBody([html.Div(id="stats-output")])], className="card mb-4 border-0 shadow-sm")])]),
             dbc.Row(
                 [
                     dbc.Col(
-                        [
-                            dbc.Card(
-                                [dbc.CardBody([html.Div(id="stats-output")])],
-                                className="card mb-4 border-0 shadow-sm",
-                            )
-                        ]
-                    )
-                ]
-            ),
-            dbc.Row(
-                [
-                    dbc.Col(
-                        [
-                            dbc.Button(
-                                "Скачать отчёт (DOCX)",
-                                id="export-report-btn",
-                                color="primary",
-                                className="w-100",
-                            )
-                        ],
+                        dbc.Button(
+                            "Скачать отчёт (DOCX)",
+                            id="export-report-btn",
+                            color="primary",
+                            className="w-100",
+                        ),
                         width=3,
                     )
                 ],
@@ -237,38 +242,34 @@ def create_app() -> Dash:
                     dbc.Row(
                         [
                             dbc.Col(
-                                [dbc.Card([dbc.CardBody([dcc.Graph(id="track-map", style={"height": "500px"})])], className="card mb-4")],
+                                dbc.Card([dbc.CardBody([dcc.Graph(id="track-map", style={"height": "500px"})])], className="card mb-4"),
                                 width=6,
                             ),
-                    dbc.Col(
-                        [
-                            dbc.Card(
-                                [
-                                    dbc.CardBody(
-                                        [
-                                            dcc.Graph(
-                                                id="accel-map",
-                                                style={"width": "100%", "height": "500px"},
-                                            )
-                                        ]
-                                    )
-                                ],
-                                className="card mb-4",
-                            )
-                        ],
-                        width=6,
-                    ),
+                            dbc.Col(
+                                dbc.Card(
+                                    [
+                                        dbc.CardBody(
+                                            [
+                                                dcc.Graph(
+                                                    id="accel-map",
+                                                    style={"width": "100%", "height": "500px"},
+                                                )
+                                            ]
+                                        )
+                                    ],
+                                    className="card mb-4",
+                                ),
+                                width=6,
+                            ),
                         ]
                     ),
                     dbc.Row(
                         [
                             dbc.Col(
-                                [
-                                    dbc.Card(
-                                        [dbc.CardBody([dcc.Graph(id="brake-throttle-plot", style={"height": "500px"})])],
-                                        className="card mb-4",
-                                    )
-                                ]
+                                dbc.Card(
+                                    [dbc.CardBody([dcc.Graph(id="brake-throttle-plot", style={"height": "500px"})])],
+                                    className="card mb-4",
+                                )
                             )
                         ]
                     ),
@@ -288,12 +289,194 @@ def create_app() -> Dash:
                     )
                 ]
             ),
+        ]
+    )
+
+    standings_page = html.Div(
+        [
+            dbc.Row([dbc.Col([html.H2("Чемпионат", className="text-center my-2")])]),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody(
+                                dbc.Row(
+                                    [
+                                        dbc.Col(
+                                            [
+                                                html.Label("Год"),
+                                                dbc.Select(
+                                                    id="standings-year",
+                                                    options=[{"label": y, "value": y} for y in range(1950, current_year + 1)],
+                                                    value=current_year - 1,
+                                                    className="dropdown",
+                                                ),
+                                            ],
+                                            width=3,
+                                        ),
+                                        dbc.Col(
+                                            [
+                                                html.Label("Топ"),
+                                                dbc.Select(
+                                                    id="standings-topn",
+                                                    options=[{"label": n, "value": n} for n in [5, 10, 15, 20]],
+                                                    value=10,
+                                                    className="dropdown",
+                                                ),
+                                            ],
+                                            width=2,
+                                        ),
+                                    ],
+                                    className="g-2",
+                                )
+                            ),
+                            className="card mb-3",
+                        ),
+                        width=12,
+                    )
+                ]
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody([html.H5("Личный зачёт", className="mb-2"), html.Div(id="driver-standings-table")]),
+                            className="card mb-3",
+                        ),
+                        width=6,
+                    ),
+                    dbc.Col(
+                        dbc.Card(
+                            dbc.CardBody([html.H5("Кубок конструкторов", className="mb-2"), html.Div(id="constructor-standings-table")]),
+                            className="card mb-3",
+                        ),
+                        width=6,
+                    ),
+                ]
+            ),
+            dbc.Row([dbc.Col(dbc.Card(dbc.CardBody([dcc.Graph(id="driver-standings-graph")]), className="card mb-3"), width=12)]),
+            dbc.Row([dbc.Col(dbc.Card(dbc.CardBody([dcc.Graph(id="constructor-standings-graph")]), className="card mb-3"), width=12)]),
+        ]
+    )
+
+    app.layout = dbc.Container(
+        [
+            dcc.Location(id="url"),
+            navbar,
+            html.Div(id="page-content"),
         ],
         fluid=True,
         id="root-container",
         className="theme-dark",
         style={"padding": "20px"},
     )
+
+    @app.callback(Output("page-content", "children"), Input("url", "pathname"))
+    def route_pages(pathname: str | None):
+        if pathname == "/standings":
+            return standings_page
+        return dashboard_page
+
+    def _df_to_table(df: pd.DataFrame, *, columns: list[tuple[str, str]], max_rows: int = 20):
+        if df is None or df.empty:
+            return dbc.Alert("Нет данных", color="warning")
+        view = df.copy()
+        view = view.head(max_rows)
+        header = [html.Thead(html.Tr([html.Th(title) for title, _ in columns]))]
+        body_rows = []
+        for _, r in view.iterrows():
+            tds = []
+            for _title, col in columns:
+                val = r.get(col, "")
+                if isinstance(val, float):
+                    val = f"{val:g}"
+                tds.append(html.Td(val))
+            body_rows.append(html.Tr(tds))
+        body = [html.Tbody(body_rows)]
+        return dbc.Table(header + body, striped=True, bordered=False, hover=True, size="sm", responsive=True)
+
+    @app.callback(
+        Output("driver-standings-table", "children"),
+        Output("constructor-standings-table", "children"),
+        Output("driver-standings-graph", "figure"),
+        Output("constructor-standings-graph", "figure"),
+        Input("standings-year", "value"),
+        Input("standings-topn", "value"),
+        Input("theme-dropdown", "value"),
+    )
+    def update_standings_page(season, topn, theme):
+        season = int(season) if season else current_year - 1
+        topn = int(topn) if topn else 10
+        theme = (theme or "dark").lower()
+
+        # Tables (current standings)
+        ddf = get_driver_standings(season)
+        cdf = get_constructor_standings(season)
+
+        if not ddf.empty:
+            ddf = ddf.copy()
+            ddf["Driver"] = (ddf["givenName"].astype(str) + " " + ddf["familyName"].astype(str)).str.strip()
+            ddf["Team"] = ddf["constructorNames"].apply(lambda x: x[0] if isinstance(x, list) and x else "")
+        if not cdf.empty:
+            cdf = cdf.copy()
+            cdf["Constructor"] = cdf["constructorName"]
+
+        driver_table = _df_to_table(
+            ddf,
+            columns=[("Pos", "position"), ("Driver", "Driver"), ("PTS", "points"), ("Wins", "wins"), ("Team", "Team")],
+            max_rows=topn,
+        )
+        constructor_table = _df_to_table(
+            cdf,
+            columns=[("Pos", "position"), ("Constructor", "constructorName"), ("PTS", "points"), ("Wins", "wins")],
+            max_rows=topn,
+        )
+
+        # Rounds list for trend charts
+        try:
+            schedule = fastf1.get_event_schedule(season)
+            rounds = sorted([int(r) for r in schedule["RoundNumber"].dropna().astype(int).tolist() if int(r) > 0])
+        except Exception:
+            rounds = list(range(1, 25))
+
+        dts = build_standings_timeseries(season=season, rounds=rounds, kind="driver", top_n=topn)
+        cts = build_standings_timeseries(season=season, rounds=rounds, kind="constructor", top_n=topn)
+
+        font_color = "#E5E7EB" if theme == "dark" else "#111827"
+        bg = "#111111" if theme == "dark" else "#ffffff"
+        grid = "#333333" if theme == "dark" else "#e5e7eb"
+
+        dfig = go.Figure()
+        if not dts.empty:
+            for name, g in dts.groupby("name"):
+                dfig.add_trace(go.Scatter(x=g["round"], y=g["position"], mode="lines+markers", name=name))
+        dfig.update_layout(
+            title="Динамика позиций (пилоты)",
+            plot_bgcolor=bg,
+            paper_bgcolor=bg,
+            font=dict(color=font_color),
+            hovermode="x unified",
+            margin=dict(l=10, r=10, t=50, b=10),
+        )
+        dfig.update_xaxes(title="Раунд", gridcolor=grid)
+        dfig.update_yaxes(title="Позиция", autorange="reversed", gridcolor=grid)
+
+        cfig = go.Figure()
+        if not cts.empty:
+            for name, g in cts.groupby("name"):
+                cfig.add_trace(go.Scatter(x=g["round"], y=g["position"], mode="lines+markers", name=name))
+        cfig.update_layout(
+            title="Динамика позиций (конструкторы)",
+            plot_bgcolor=bg,
+            paper_bgcolor=bg,
+            font=dict(color=font_color),
+            hovermode="x unified",
+            margin=dict(l=10, r=10, t=50, b=10),
+        )
+        cfig.update_xaxes(title="Раунд", gridcolor=grid)
+        cfig.update_yaxes(title="Позиция", autorange="reversed", gridcolor=grid)
+
+        return driver_table, constructor_table, dfig, cfig
 
     @app.callback(
         Output("race-dropdown", "options"),
