@@ -673,7 +673,14 @@ def create_app() -> Dash:
             paper_bgcolor=bg,
             font=dict(color=font_color),
             hovermode="x unified",
-            margin=dict(l=10, r=10, t=50, b=10),
+            margin=dict(l=10, r=10, t=50, b=90),
+            legend=dict(
+                orientation="h",
+                yanchor="top",
+                y=-0.22,
+                xanchor="left",
+                x=0,
+            ),
             yaxis2=dict(overlaying="y", side="right", showgrid=False, title="Очки"),
         )
         dfig.update_xaxes(
@@ -730,7 +737,14 @@ def create_app() -> Dash:
             paper_bgcolor=bg,
             font=dict(color=font_color),
             hovermode="x unified",
-            margin=dict(l=10, r=10, t=50, b=10),
+            margin=dict(l=10, r=10, t=50, b=90),
+            legend=dict(
+                orientation="h",
+                yanchor="top",
+                y=-0.22,
+                xanchor="left",
+                x=0,
+            ),
             yaxis2=dict(overlaying="y", side="right", showgrid=False, title="Очки"),
         )
         cfig.update_xaxes(
