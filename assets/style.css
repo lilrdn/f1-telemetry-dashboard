@@ -19,6 +19,57 @@
   z-index: 1000;
 }
 
+/* Force dropdown text to be readable regardless of theme (dcc.Dropdown / react-select) */
+.dropdown,
+.dropdown * {
+  color: #111827 !important;
+}
+
+.dropdown input,
+.dropdown input::placeholder {
+  color: #111827 !important;
+  -webkit-text-fill-color: #111827 !important;
+  opacity: 1 !important;
+}
+
+.dropdown [class*="Select__"],
+.dropdown [class*="Select-"],
+.dropdown [class*="VirtualizedSelect"],
+.dropdown [class*="virtualizedSelect"] {
+  color: #111827 !important;
+}
+
+.dropdown [class*="singleValue"],
+.dropdown [class*="SingleValue"],
+.dropdown [class*="placeholder"],
+.dropdown [class*="Placeholder"],
+.dropdown [class*="valueContainer"],
+.dropdown [class*="ValueContainer"],
+.dropdown [class*="inputContainer"],
+.dropdown [class*="InputContainer"] {
+  color: #111827 !important;
+}
+
+.dropdown [class^="css-"],
+.dropdown [class*=" css-"] {
+  color: #111827 !important;
+}
+
+.dropdown [class^="css-"] *,
+.dropdown [class*=" css-"] * {
+  color: #111827 !important;
+}
+
+.dropdown [class*="control"],
+.dropdown [class*="Control"] {
+  background-color: #ffffff !important;
+}
+
+.dropdown [class*="menu"],
+.dropdown [class*="Menu"] {
+  color: #111827 !important;
+}
+
 .filters-container {
   position: relative;
   z-index: 1000;
@@ -26,5 +77,77 @@
   border-radius: 15px;
   padding: 15px;
   box-shadow: 0 4px 20px rgba(0,0,0,0.08);
+}
+
+/* Theme-specific overrides (root container has .theme-light / .theme-dark) */
+.theme-dark .filters-container {
+  background: #0b1220;
+  box-shadow: 0 6px 24px rgba(0,0,0,0.35);
+}
+
+.theme-light .filters-container {
+  background: #ffffff;
+}
+
+/* Make muted text readable per theme */
+.theme-light .text-muted,
+.theme-light .text-muted * {
+  color: #111827 !important;
+}
+
+.theme-dark .text-muted {
+  color: #9CA3AF !important;
+}
+
+/* Dash dcc.Dropdown (react-select) readability fixes */
+/* Keep dropdowns white with black text in BOTH themes (as requested) */
+.dropdown .Select-control,
+.dropdown .Select__control {
+  background-color: #ffffff !important;
+  border-color: #D1D5DB !important;
+}
+
+/* Selected value / placeholder / typed text */
+.dropdown .Select-value,
+.dropdown .Select-value-label,
+.dropdown .Select-placeholder,
+.dropdown .Select-input > input,
+.dropdown .Select__single-value,
+.dropdown .Select__placeholder,
+.dropdown .Select__input-container,
+.dropdown .Select__input-container input {
+  color: #111827 !important;
+  opacity: 1 !important;
+}
+
+/* Dropdown arrow and clear icon visibility */
+.dropdown .Select-arrow,
+.dropdown .Select__indicator,
+.dropdown .Select__dropdown-indicator,
+.dropdown .Select__clear-indicator {
+  color: #111827 !important;
+}
+
+.dropdown .Select-arrow {
+  border-top-color: #111827 !important;
+}
+
+.dropdown .Select-clear {
+  color: #111827 !important;
+}
+
+/* Menu and options */
+.dropdown .Select-menu-outer,
+.dropdown .Select-option,
+.dropdown .Select__menu,
+.dropdown .Select__menu-list,
+.dropdown .Select__option {
+  background-color: #ffffff !important;
+  color: #111827 !important;
+}
+
+.dropdown .Select-option.is-focused,
+.dropdown .Select__option--is-focused {
+  background-color: #F3F4F6 !important;
 }
 

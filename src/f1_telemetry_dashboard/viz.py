@@ -8,16 +8,37 @@ import pandas as pd
 import plotly.graph_objects as go
 from plotly.subplots import make_subplots
 
-import matplotlib
-matplotlib.use('agg')
-import matplotlib.pyplot as plt
-from matplotlib.collections import LineCollection
-
 from .utils import is_valid_td
 
 
-def create_track_map_with_sectors(telemetry: pd.DataFrame, circuit_info=None, s1_time=None, s2_time=None) -> go.Figure:
+def _get_theme_colors(theme: str | None) -> dict[str, str]:
+    theme = (theme or "light").lower()
+    if theme == "dark":
+        return {
+            "plot_bg": "#111111",
+            "paper_bg": "#111111",
+            "font": "#FFFFFF",
+            "grid": "#333333",
+            "legend_bg": "rgba(17,17,17,0.9)",
+        }
+    return {
+        "plot_bg": "#f8f9fa",
+        "paper_bg": "#FFFFFF",
+        "font": "#000000",
+        "grid": "#e0e0e0",
+        "legend_bg": "rgba(255,255,255,0.9)",
+    }
+
+
+def create_track_map_with_sectors(
+    telemetry: pd.DataFrame,
+    circuit_info=None,
+    s1_time=None,
+    s2_time=None,
+    theme: str = "light",
+) -> go.Figure:
     fig = go.Figure()
+    colors = _get_theme_colors(theme)
 
     if telemetry is None or telemetry.empty:
         return fig
@@ -137,7 +158,7 @@ def create_track_map_with_sectors(telemetry: pd.DataFrame, circuit_info=None, s1
     fig.update_xaxes(visible=False)
     fig.update_yaxes(visible=False)
     fig.update_layout(
-        title=dict(text="🏁 Карта трассы", font=dict(size=18, family="Inter"), x=0.5),
+        title=dict(text="Карта трассы", font=dict(size=18, family="Inter", color=colors["font"]), x=0.5),
         autosize=True,
         margin=dict(l=0, r=0, t=50, b=70),
         showlegend=True,
@@ -147,18 +168,20 @@ def create_track_map_with_sectors(telemetry: pd.DataFrame, circuit_info=None, s1
             y=-0.25,
             xanchor="center",
             x=0.5,
-            bgcolor="rgba(255,255,255,0.9)",
+            bgcolor=colors["legend_bg"],
             bordercolor="black",
             borderwidth=1,
         ),
-        plot_bgcolor="#f8f9fa",
-        paper_bgcolor="white",
+        plot_bgcolor=colors["plot_bg"],
+        paper_bgcolor=colors["paper_bg"],
+        font=dict(color=colors["font"]),
     )
     return fig
 
 
-def create_brake_throttle_plot(telemetry: pd.DataFrame) -> go.Figure:
+def create_brake_throttle_plot(telemetry: pd.DataFrame, theme: str = "light") -> go.Figure:
     fig = make_subplots(specs=[[{"secondary_y": True}]])
+    colors = _get_theme_colors(theme)
     if telemetry is None or telemetry.empty:
         return fig
     if "Distance" not in telemetry.columns:
@@ -202,62 +225,120 @@ def create_brake_throttle_plot(telemetry: pd.DataFrame) -> go.Figure:
         )
 
     fig.update_layout(
-        title=dict(text="📊 Телеметрия круга", font=dict(size=18, family="Inter"), x=0.5),
+        title=dict(text="Телеметрия круга", font=dict(size=18, family="Inter", color=colors["font"]), x=0.5),
         hovermode="x unified",
-        plot_bgcolor="#f8f9fa",
-        paper_bgcolor="white",
+        plot_bgcolor=colors["plot_bg"],
+        paper_bgcolor=colors["paper_bg"],
+        font=dict(color=colors["font"]),
     )
-    fig.update_xaxes(title_text="Дистанция (м)", gridcolor="#e0e0e0")
-    fig.update_yaxes(title_text="Газ (%)", secondary_y=False, range=[0, 110], gridcolor="#e0e0e0")
-    fig.update_yaxes(title_text="Скорость (км/ч)", secondary_y=True, gridcolor="#e0e0e0")
+    fig.update_xaxes(title_text="Дистанция (м)", gridcolor=colors["grid"])
+    fig.update_yaxes(title_text="Газ (%)", secondary_y=False, range=[0, 110], gridcolor=colors["grid"])
+    fig.update_yaxes(title_text="Скорость (км/ч)", secondary_y=True, gridcolor=colors["grid"])
     return fig
 
 
-def create_acceleration_map_base64(telemetry: pd.DataFrame) -> str:
-    if telemetry is None or telemetry.empty or "Speed" not in telemetry.columns or "Time" not in telemetry.columns:
-        fig, ax = plt.subplots(figsize=(8, 6))
-        ax.text(0.5, 0.5, "Нет данных телеметрии", ha="center", va="center")
-        ax.axis("off")
-    else:
-        dt = telemetry["Time"].diff().dt.total_seconds()
-        dv = telemetry["Speed"].diff()
-        acc = dv / dt
+def create_acceleration_map_figure(telemetry: pd.DataFrame, theme: str = "light") -> go.Figure:
+    colors = _get_theme_colors(theme)
 
-        if not all(col in telemetry.columns for col in ["X", "Y"]):
-            fig, ax = plt.subplots(figsize=(8, 6))
-            ax.text(0.5, 0.5, "Нет координат трассы", ha="center", va="center")
-            ax.axis("off")
-        else:
-            x = telemetry["X"].values
-            y = telemetry["Y"].values
-            acc = acc.values
-            mask = ~np.isnan(acc)
-            x = x[mask]
-            y = y[mask]
-            acc = acc[mask]
-            if len(x) < 2:
-                fig, ax = plt.subplots(figsize=(8, 6))
-                ax.text(0.5, 0.5, "Недостаточно точек", ha="center", va="center")
-                ax.axis("off")
-            else:
-                points = np.array([x, y]).T.reshape(-1, 1, 2)
-                segments = np.concatenate([points[:-1], points[1:]], axis=1)
-                fig, ax = plt.subplots(figsize=(8, 6), facecolor="white")
-                norm = plt.Normalize(-20, 20)
-                lc = LineCollection(segments, cmap="RdYlGn_r", norm=norm, linewidth=3)
-                lc.set_array(acc[:-1])
-                ax.add_collection(lc)
-                ax.set_xlim(x.min(), x.max())
-                ax.set_ylim(y.min(), y.max())
-                ax.set_title("Торможения (зеленый) / Ускорения (красный)", fontsize=14, fontweight="bold")
-                ax.axis("equal")
-                ax.axis("off")
-                ax.set_facecolor("#f8f9fa")
-                plt.colorbar(lc, ax=ax, label="Ускорение (км/ч/с)", shrink=0.8, pad=0.05)
+    fig = go.Figure()
 
-    buf = BytesIO()
-    fig.savefig(buf, format="png", dpi=100, bbox_inches="tight", facecolor="white")
-    buf.seek(0)
-    plt.close(fig)
-    return base64.b64encode(buf.read()).decode("utf-8")
+    def _apply_common_layout(target_fig: go.Figure, message: str | None = None) -> None:
+        if message:
+            target_fig.add_annotation(
+                text=message,
+                showarrow=False,
+                x=0.5,
+                y=0.5,
+                xref="paper",
+                yref="paper",
+                font=dict(size=16, family="Inter", color=colors["font"]),
+            )
+        target_fig.update_xaxes(visible=False)
+        target_fig.update_yaxes(visible=False)
+        target_fig.update_layout(
+            title=dict(
+                text="Торможения (зелёный) / Ускорения (красный)",
+                font=dict(size=18, family="Inter", color=colors["font"]),
+                x=0.5,
+            ),
+            margin=dict(l=0, r=0, t=50, b=20),
+            plot_bgcolor=colors["plot_bg"],
+            paper_bgcolor=colors["paper_bg"],
+            font=dict(color=colors["font"]),
+        )
+
+    if (
+        telemetry is None
+        or telemetry.empty
+        or "Speed" not in telemetry.columns
+        or "Time" not in telemetry.columns
+    ):
+        _apply_common_layout(fig, "Нет данных телеметрии")
+        return fig
+
+    if not all(col in telemetry.columns for col in ["X", "Y"]):
+        _apply_common_layout(fig, "Нет координат трассы")
+        return fig
+
+    dt = telemetry["Time"].diff().dt.total_seconds()
+    dv = telemetry["Speed"].diff()
+    acc = dv / dt
+
+    df = telemetry.copy()
+    df["acc"] = acc
+    df = df.dropna(subset=["X", "Y", "acc"]).sort_values("Time")
+
+    if len(df) < 2:
+        _apply_common_layout(fig, "Недостаточно точек")
+        return fig
+
+    # Clamp accelerations for a stable color scale
+    acc_vals = df["acc"].to_numpy()
+    acc_min, acc_max = -20, 20
+    acc_clamped = np.clip(acc_vals, acc_min, acc_max)
+
+    fig.add_trace(
+        go.Scatter(
+            x=df["X"],
+            y=df["Y"],
+            mode="markers",
+            marker=dict(
+                size=6,
+                color=acc_clamped,
+                colorscale="RdYlGn_r",
+                cmin=acc_min,
+                cmax=acc_max,
+                colorbar=dict(
+                    title=dict(text="Ускорение (км/ч/с)", side="right"),
+                ),
+            ),
+            hovertemplate=(
+                "X: %{x:.1f}<br>"
+                "Y: %{y:.1f}<br>"
+                "Ускорение: %{marker.color:.2f} км/ч/с"
+                "<extra></extra>"
+            ),
+            name="Ускорение",
+        )
+    )
+
+    fig.update_xaxes(visible=False, scaleanchor="y", scaleratio=1)
+    fig.update_yaxes(visible=False)
+    _apply_common_layout(fig)
+    return fig
+
+
+def create_acceleration_map_base64(telemetry: pd.DataFrame, theme: str = "light") -> str:
+    """
+    Сохранён для обратной совместимости: строит ту же фигуру, но
+    возвращает PNG в base64 (например, для отчётов).
+    """
+    fig = create_acceleration_map_figure(telemetry, theme=theme)
+    try:
+        img_bytes = fig.to_image(format="png", width=800, height=600, scale=2)
+    except Exception as e:  # pragma: no cover - safety net вокруг kaleido
+        print(f"[VIZ] Failed to render acceleration map via plotly: {e}")
+        return ""
+
+    return base64.b64encode(img_bytes).decode("utf-8")
 

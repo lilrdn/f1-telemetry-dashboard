@@ -6,7 +6,7 @@ from io import BytesIO
 
 import plotly.graph_objects as go
 
-from .utils import data_uri_to_bytes, sanitize_filename
+from .utils import sanitize_filename
 
 try:
     from docx import Document
@@ -31,7 +31,7 @@ def _plotly_fig_dict_to_png_bytes(fig_dict, *, width=1200, height=700, scale=2) 
         return None
 
 
-def build_report_docx_bytes(report_data: dict, track_fig_dict, brake_fig_dict, accel_src: str | None) -> bytes:
+def build_report_docx_bytes(report_data: dict, track_fig_dict, brake_fig_dict, accel_fig_dict) -> bytes:
     if Document is None:
         raise RuntimeError("python-docx не установлен. Установи: pip install python-docx")
 
@@ -98,12 +98,12 @@ def build_report_docx_bytes(report_data: dict, track_fig_dict, brake_fig_dict, a
     else:
         doc.add_paragraph("Телеметрия: не удалось выгрузить (проверь kaleido).")
 
-    accel_bytes = data_uri_to_bytes(accel_src)
-    if accel_bytes:
+    accel_png = _plotly_fig_dict_to_png_bytes(accel_fig_dict, width=1400, height=700, scale=2)
+    if accel_png:
         doc.add_paragraph("Карта ускорений/торможений")
-        doc.add_picture(BytesIO(accel_bytes), width=Inches(6.5))
+        doc.add_picture(BytesIO(accel_png), width=Inches(6.5))
     else:
-        doc.add_paragraph("Карта ускорений: нет данных/не удалось выгрузить.")
+        doc.add_paragraph("Карта ускорений: нет данных/не удалось выгрузить (проверь kaleido).")
 
     out = BytesIO()
     doc.save(out)

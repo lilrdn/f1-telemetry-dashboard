@@ -22,7 +22,12 @@ from .data import (
 )
 from .report import build_report_docx_bytes, default_report_filename
 from .utils import format_timedelta, image_to_base64, safe_int
-from .viz import create_acceleration_map_base64, create_brake_throttle_plot, create_track_map_with_sectors
+from .viz import (
+    create_acceleration_map_base64,
+    create_acceleration_map_figure,
+    create_brake_throttle_plot,
+    create_track_map_with_sectors,
+)
 
 
 def create_app() -> Dash:
@@ -37,11 +42,11 @@ def create_app() -> Dash:
 
     current_year = datetime.datetime.now().year
 
-    app = Dash(__name__, external_stylesheets=[dbc.themes.BOOTSTRAP])
+    app = Dash(__name__, external_stylesheets=[dbc.themes.DARKLY])
 
     app.layout = dbc.Container(
         [
-            dbc.Row([dbc.Col([html.H1("🏎️ F1 Телеметрия Дашборд", className="text-center my-4")])]),
+            dbc.Row([dbc.Col([html.H1("F1 Телеметрия Дашборд", className="text-center my-4")])]),
             html.Div(
                 [
                     dbc.Row(
@@ -58,7 +63,7 @@ def create_app() -> Dash:
                                                             dbc.Col(
                                                                 [
                                                                     html.Label("Год"),
-                                                                    dcc.Dropdown(
+                                                                    dbc.Select(
                                                                         id="year-dropdown",
                                                                         options=[
                                                                             {"label": y, "value": y}
@@ -73,11 +78,11 @@ def create_app() -> Dash:
                                                             dbc.Col(
                                                                 [
                                                                     html.Label("Тип события"),
-                                                                    dcc.Dropdown(
+                                                                    dbc.Select(
                                                                         id="event-type-dropdown",
                                                                         options=[
-                                                                            {"label": "🏁 Гран-при", "value": "gp"},
-                                                                            {"label": "🔧 Тесты", "value": "test"},
+                                                                            {"label": "Гран-при", "value": "gp"},
+                                                                            {"label": "Тесты", "value": "test"},
                                                                         ],
                                                                         value="gp",
                                                                         className="dropdown",
@@ -86,25 +91,25 @@ def create_app() -> Dash:
                                                                 width=2,
                                                             ),
                                                             dbc.Col(
-                                                                [html.Label("Событие"), dcc.Dropdown(id="race-dropdown", className="dropdown")],
+                                                                [html.Label("Событие"), dbc.Select(id="race-dropdown", className="dropdown")],
                                                                 width=3,
                                                             ),
                                                             dbc.Col(
                                                                 [
                                                                     html.Label("Сессия"),
-                                                                    dcc.Dropdown(id="session-dropdown", className="dropdown"),
+                                                                    dbc.Select(id="session-dropdown", className="dropdown"),
                                                                 ],
                                                                 width=2,
                                                             ),
                                                             dbc.Col(
                                                                 [
                                                                     html.Label("Гонщик"),
-                                                                    dcc.Dropdown(id="driver-dropdown", className="dropdown"),
+                                                                    dbc.Select(id="driver-dropdown", className="dropdown"),
                                                                 ],
                                                                 width=2,
                                                             ),
                                                             dbc.Col(
-                                                                [html.Label("Круг"), dcc.Dropdown(id="lap-dropdown", className="dropdown")],
+                                                                [html.Label("Круг"), dbc.Select(id="lap-dropdown", className="dropdown")],
                                                                 width=1,
                                                             ),
                                                         ],
@@ -120,7 +125,27 @@ def create_app() -> Dash:
                         ]
                     )
                 ],
-                className="filters-container mb-4",
+                className="filters-container mb-3",
+            ),
+            dbc.Row(
+                [
+                    dbc.Col(
+                        [
+                            html.Label("Тема"),
+                            dbc.Select(
+                                id="theme-dropdown",
+                                options=[
+                                    {"label": "Светлая тема", "value": "light"},
+                                    {"label": "Тёмная тема", "value": "dark"},
+                                ],
+                                value="dark",
+                                className="dropdown",
+                            ),
+                        ],
+                        width=2,
+                    )
+                ],
+                className="mb-4",
             ),
             dbc.Row(
                 [
@@ -175,25 +200,31 @@ def create_app() -> Dash:
                 ],
                 className="mb-3",
             ),
-            dbc.Row([dbc.Col([dbc.Card([dbc.CardBody([html.Div(id="stats-output")])], className="card mb-4")])]),
             dbc.Row(
                 [
                     dbc.Col(
                         [
-                            dbc.Button("📄 Скачать отчёт (DOCX)", id="export-report-btn", color="primary", className="w-100")
-                        ],
-                        width=3,
-                    ),
+                            dbc.Card(
+                                [dbc.CardBody([html.Div(id="stats-output")])],
+                                className="card mb-4 border-0 shadow-sm",
+                            )
+                        ]
+                    )
+                ]
+            ),
+            dbc.Row(
+                [
                     dbc.Col(
                         [
-                            html.Div(
-                                "Отчёт включает: параметры, статистику круга, карту трассы, телеметрию и карту ускорений.",
-                                className="text-muted",
-                                style={"display": "flex", "alignItems": "center", "height": "100%"},
+                            dbc.Button(
+                                "Скачать отчёт (DOCX)",
+                                id="export-report-btn",
+                                color="primary",
+                                className="w-100",
                             )
                         ],
-                        width=9,
-                    ),
+                        width=3,
+                    )
                 ],
                 className="mb-4",
             ),
@@ -209,24 +240,24 @@ def create_app() -> Dash:
                                 [dbc.Card([dbc.CardBody([dcc.Graph(id="track-map", style={"height": "500px"})])], className="card mb-4")],
                                 width=6,
                             ),
-                            dbc.Col(
+                    dbc.Col(
+                        [
+                            dbc.Card(
                                 [
-                                    dbc.Card(
+                                    dbc.CardBody(
                                         [
-                                            dbc.CardBody(
-                                                [
-                                                    html.Img(
-                                                        id="accel-map",
-                                                        style={"width": "100%", "height": "500px", "objectFit": "contain"},
-                                                    )
-                                                ]
+                                            dcc.Graph(
+                                                id="accel-map",
+                                                style={"width": "100%", "height": "500px"},
                                             )
-                                        ],
-                                        className="card mb-4",
+                                        ]
                                     )
                                 ],
-                                width=6,
-                            ),
+                                className="card mb-4",
+                            )
+                        ],
+                        width=6,
+                    ),
                         ]
                     ),
                     dbc.Row(
@@ -250,7 +281,8 @@ def create_app() -> Dash:
                             html.Hr(),
                             html.P(
                                 f"Данные FastF1 • Обновлено: {datetime.datetime.now().strftime('%d.%m.%Y')}",
-                                className="text-center text-muted",
+                                className="text-center",
+                                style={"color": "inherit", "opacity": 0.75},
                             ),
                         ]
                     )
@@ -258,7 +290,9 @@ def create_app() -> Dash:
             ),
         ],
         fluid=True,
-        style={"padding": "20px", "backgroundColor": "#f0f2f5"},
+        id="root-container",
+        className="theme-dark",
+        style={"padding": "20px"},
     )
 
     @app.callback(
@@ -273,23 +307,65 @@ def create_app() -> Dash:
             return events, events[0]["value"]
         return [], None
 
-    @app.callback(Output("session-dropdown", "options"), Output("session-dropdown", "value"), Input("event-type-dropdown", "value"))
-    def update_sessions(event_type):
+    @app.callback(
+        Output("session-dropdown", "options"),
+        Output("session-dropdown", "value"),
+        Input("year-dropdown", "value"),
+        Input("event-type-dropdown", "value"),
+        Input("race-dropdown", "value"),
+    )
+    def update_sessions(year, event_type, race):
         if event_type == "test":
             return (
                 [{"label": "Сессия 1", "value": "1"}, {"label": "Сессия 2", "value": "2"}, {"label": "Сессия 3", "value": "3"}],
                 "1",
             )
-        return (
-            [
-                {"label": "🏁 Гонка", "value": "R"},
-                {"label": "⚡ Квалификация", "value": "Q"},
-                {"label": "🔄 Практика 1", "value": "FP1"},
-                {"label": "🔄 Практика 2", "value": "FP2"},
-                {"label": "🔄 Практика 3", "value": "FP3"},
-            ],
-            "R",
-        )
+        import pandas as pd  # локальный импорт, чтобы не тащить в глобальный scope, если fastf1 изменится
+
+        base_options = [
+            {"label": "Гонка", "value": "R"},
+            {"label": "Квалификация", "value": "Q"},
+        ]
+
+        practice_options = [
+            {"label": "Практика 1", "value": "FP1"},
+            {"label": "Практика 2", "value": "FP2"},
+            {"label": "Практика 3", "value": "FP3"},
+        ]
+
+        if not year or not race:
+            return base_options + practice_options, "R"
+
+        has_sprint = False
+        has_sprint_qual = False
+
+        try:
+            schedule = fastf1.get_event_schedule(int(year))
+            event_row = schedule[schedule["EventName"].str.contains(str(race), case=False, na=False)]
+            if event_row.empty:
+                event_row = schedule[schedule["Country"].str.contains(str(race), case=False, na=False)]
+
+            if not event_row.empty:
+                row = event_row.iloc[0]
+                session_cols = [c for c in row.index if c.lower().startswith("session")]
+                session_names = [str(row[c]) for c in session_cols if pd.notna(row[c])]
+                for name in session_names:
+                    lname = name.lower()
+                    if "sprint" in lname and ("qual" in lname or "shootout" in lname):
+                        has_sprint_qual = True
+                    elif "sprint" in lname:
+                        has_sprint = True
+        except Exception as e:
+            print(f"[ERROR] update_sessions (sprint detection): {e}")
+
+        options = list(base_options)
+        if has_sprint_qual:
+            options.append({"label": "Спринт-квалификация", "value": "SQ"})
+        if has_sprint:
+            options.append({"label": "Спринт-гонка", "value": "S"})
+
+        options.extend(practice_options)
+        return options, "R"
 
     @app.callback(
         Output("driver-dropdown", "options"),
@@ -344,7 +420,7 @@ def create_app() -> Dash:
         Output("stats-output", "children"),
         Output("track-map", "figure"),
         Output("brake-throttle-plot", "figure"),
-        Output("accel-map", "src"),
+        Output("accel-map", "figure"),
         Output("driver-portrait", "src"),
         Output("driver-name", "children"),
         Output("team-logo", "src"),
@@ -356,10 +432,13 @@ def create_app() -> Dash:
         Input("session-dropdown", "value"),
         Input("driver-dropdown", "value"),
         Input("lap-dropdown", "value"),
+        Input("theme-dropdown", "value"),
     )
-    def update_dashboard(year, event_type, race, session_id, driver_code, lap_num):
+    def update_dashboard(year, event_type, race, session_id, driver_code, lap_num, theme):
         if not all([year, race, session_id, driver_code, lap_num]):
-            return "Выберите все параметры", go.Figure(), go.Figure(), "", None, "", None, "", {}
+            return "Выберите все параметры", go.Figure(), go.Figure(), go.Figure(), None, "", None, "", {}
+
+        theme = theme or "light"
 
         try:
             sess = load_session_data(int(year), str(race), str(session_id), event_type, load_full=True)
@@ -400,7 +479,7 @@ def create_app() -> Dash:
                             [
                                 dbc.CardBody(
                                     [
-                                        html.H6("🏁 Круг", className="text-muted"),
+                                        html.H6("Круг", className="text-muted"),
                                         html.H3(f"{safe_int(lap_num)}", className="fw-bold"),
                                     ],
                                     style={
@@ -420,7 +499,7 @@ def create_app() -> Dash:
                             [
                                 dbc.CardBody(
                                     [
-                                        html.H6("⏱️ Время круга", className="text-muted"),
+                                        html.H6("Время круга", className="text-muted"),
                                         html.H3(
                                             f"{format_timedelta(lap_time)}",
                                             className="fw-bold",
@@ -444,7 +523,7 @@ def create_app() -> Dash:
                             [
                                 dbc.CardBody(
                                     [
-                                        html.H6("🔘 Шины", className="text-muted"),
+                                        html.H6("Шины", className="text-muted"),
                                         html.H3(compound, className="fw-bold"),
                                         html.Small(f"износ: {tyre_life} кр."),
                                     ],
@@ -464,7 +543,7 @@ def create_app() -> Dash:
                         dbc.Card(
                             [
                                 dbc.CardBody(
-                                    [html.H6("⛽ Пит-стопы", className="text-muted"), html.H3(pit_stops, className="fw-bold")],
+                                    [html.H6("Пит-стопы", className="text-muted"), html.H3(pit_stops, className="fw-bold")],
                                     style={
                                         "minHeight": "120px",
                                         "display": "flex",
@@ -482,7 +561,7 @@ def create_app() -> Dash:
                             [
                                 dbc.CardBody(
                                     [
-                                        html.H6("📊 Сектора", className="text-muted"),
+                                        html.H6("Сектора", className="text-muted"),
                                         html.Div(
                                             [
                                                 html.Span("S1: ", style={"color": "#FF4C4C"}),
@@ -519,10 +598,15 @@ def create_app() -> Dash:
             except Exception as e:
                 print(f"[WARN] telemetry error: {e}")
 
-            track_fig = create_track_map_with_sectors(telemetry, circuit_info, s1_time=s1_time, s2_time=s2_time)
-            brake_fig = create_brake_throttle_plot(telemetry)
-            accel_b64 = create_acceleration_map_base64(telemetry)
-            accel_src = f"data:image/png;base64,{accel_b64}" if accel_b64 else ""
+            track_fig = create_track_map_with_sectors(
+                telemetry,
+                circuit_info,
+                s1_time=s1_time,
+                s2_time=s2_time,
+                theme=theme,
+            )
+            brake_fig = create_brake_throttle_plot(telemetry, theme=theme)
+            accel_fig = create_acceleration_map_figure(telemetry, theme=theme)
 
             report_data = {
                 "year": int(year),
@@ -544,11 +628,11 @@ def create_app() -> Dash:
                 "team_logo_src": logo_src,
             }
 
-            return stats, track_fig, brake_fig, accel_src, portrait_src, driver_info["name"], logo_src, driver_info["team"], report_data
+            return stats, track_fig, brake_fig, accel_fig, portrait_src, driver_info["name"], logo_src, driver_info["team"], report_data
         except Exception as e:
             print(f"[DASHBOARD ERROR] {e}")
             traceback.print_exc()
-            return dbc.Alert(f"Ошибка: {e}", color="danger"), go.Figure(), go.Figure(), "", None, "", None, "", {}
+            return dbc.Alert(f"Ошибка: {e}", color="danger"), go.Figure(), go.Figure(), go.Figure(), None, "", None, "", {}
 
     @app.callback(
         Output("download-report", "data"),
@@ -556,14 +640,14 @@ def create_app() -> Dash:
         State("report-store", "data"),
         State("track-map", "figure"),
         State("brake-throttle-plot", "figure"),
-        State("accel-map", "src"),
+        State("accel-map", "figure"),
         prevent_initial_call=True,
     )
-    def export_report(_n, report_data, track_fig_dict, brake_fig_dict, accel_src):
+    def export_report(_n, report_data, track_fig_dict, brake_fig_dict, accel_fig_dict):
         if not report_data:
             return None
         try:
-            docx_bytes = build_report_docx_bytes(report_data, track_fig_dict, brake_fig_dict, accel_src)
+            docx_bytes = build_report_docx_bytes(report_data, track_fig_dict, brake_fig_dict, accel_fig_dict)
             filename = default_report_filename(report_data)
             return dcc.send_bytes(
                 docx_bytes,
@@ -574,6 +658,22 @@ def create_app() -> Dash:
             print(f"[REPORT] Failed to build docx: {e}")
             traceback.print_exc()
             return None
+
+    @app.callback(
+        Output("root-container", "style"),
+        Output("root-container", "className"),
+        Input("theme-dropdown", "value"),
+    )
+    def update_root_style(theme):
+        theme = (theme or "dark").lower()
+        base_style = {"padding": "20px"}
+        if theme == "dark":
+            base_style["backgroundColor"] = "#020617"  # почти чёрный, без резкой контрастности
+            base_style["color"] = "#E5E7EB"  # светлый текст
+        else:
+            base_style["backgroundColor"] = "#F3F4F6"
+            base_style["color"] = "#020617"
+        return base_style, f"theme-{theme}"
 
     return app
 
