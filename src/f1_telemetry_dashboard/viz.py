@@ -135,7 +135,7 @@ def create_track_map_with_sectors(
                     mode="markers+text",
                     marker=dict(size=8, color="white", line=dict(color="black", width=1)),
                     text=corner["Number"],
-                    textfont=dict(size=10, color="black"),
+                    textfont=dict(size=10, color=colors["font"]),
                     textposition="top center",
                     showlegend=False,
                 )
